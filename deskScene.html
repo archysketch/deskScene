@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Desk Scene</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #111;
+    overflow: hidden;
+  }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r157/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r157/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+console.log("ThreeJS version:", THREE.REVISION);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+// CAMERA
+const camera = new THREE.PerspectiveCamera(
+  35,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  2000
+);
+camera.position.set(0, 0, 30);
+
+// RENDERER
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// LIGHTS
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(5, 5, 10);
+scene.add(dir);
+scene.add(new THREE.AmbientLight(0xffffff, 1));
+
+// MODELS
+const loader = new THREE.GLTFLoader();
+const urls = [
+  "https://cdn.jsdelivr.net/gh/archysketch/glb-models/screw.glb",
+  "https://cdn.jsdelivr.net/gh/archysketch/glb-models/screw_nut.glb"
+];
+
+const objects = [];
+
+function spawnModel() {
+  const url = urls[Math.floor(Math.random() * urls.length)];
+
+  loader.load(url, (gltf) => {
+    const m = gltf.scene;
+    m.scale.set(2, 2, 2);
+
+    m.position.set(
+      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 20
+    );
+
+    m.rotation.set(
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI
+    );
+
+    scene.add(m);
+
+    objects.push({
+      mesh: m,
+      vx: (Math.random() - 0.5) * 0.03,
+      vy: (Math.random() - 0.5) * 0.03,
+      vz: (Math.random() - 0.5) * 0.03,
+      rx: (Math.random() - 0.5) * 0.015,
+      ry: (Math.random() - 0.5) * 0.015,
+      rz: (Math.random() - 0.5) * 0.015,
+    });
+
+    console.log("Loaded:", url);
+  });
+}
+
+for (let i = 0; i < 16; i++) spawnModel();
+
+// MOUSE PARALLAX
+let mouse = { x: 0, y: 0 };
+
+window.addEventListener("mousemove", (e) => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+});
+
+// ANIMATION
+function animate() {
+  requestAnimationFrame(animate);
+
+  // camera follow mouse
+  camera.position.x += (mouse.x * 2 - camera.position.x) * 0.03;
+  camera.position.y += (mouse.y * 2 - camera.position.y) * 0.03;
+  camera.lookAt(0, 0, 0);
+
+  objects.forEach((o) => {
+    o.mesh.position.x += o.vx;
+    o.mesh.position.y += o.vy;
+    o.mesh.position.z += o.vz;
+
+    // cluster gravity (Lusion style)
+    o.mesh.position.x += -o.mesh.position.x * 0.002;
+    o.mesh.position.y += -o.mesh.position.y * 0.002;
+    o.mesh.position.z += -o.mesh.position.z * 0.002;
+
+    // 3-axis rotation
+    o.mesh.rotation.x += o.rx;
+    o.mesh.rotation.y += o.ry;
+    o.mesh.rotation.z += o.rz;
+  });
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// RESIZE
+window.addEventListener("resize", () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+
+</body>
+</html>
